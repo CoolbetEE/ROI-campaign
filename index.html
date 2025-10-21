@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Raffle Promo ROI</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0b111d; --panel:#11192b; --panel2:#0d1424; --stroke:rgba(255,255,255,.08);
+    --text:#eef2ff; --muted:#9aa6c4; --accent:#ff8a00; --accent2:#ffbd3a;
+    --good:#10b981; --warn:#f59e0b; --bad:#ef4444;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}
+  .wrap{max-width:1024px;margin:36px auto;padding:0 16px}
+  .card{background:var(--panel);border:1px solid var(--stroke);border-radius:18px;box-shadow:0 14px 40px rgba(0,0,0,.30)}
+  .header{padding:26px;text-align:center}
+  .badge{display:inline-block;padding:8px 14px;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#0b0f18;font-weight:900}
+  h1{margin:12px 0 0;font-size:2rem;font-weight:900;letter-spacing:-.02em;
+     background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .sub{color:var(--muted);margin-top:6px}
+
+  /* Wizard */
+  .wizard{margin-top:18px}
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px}
+  .step-dot{height:6px;border-radius:6px;background:#1a2339}
+  .step-dot.active{background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  .panel{padding:22px 18px}
+  .grid{display:grid;gap:14px}
+  @media (min-width:900px){ .grid-2{grid-template-columns:1fr 1fr} }
+
+  label{display:flex;justify-content:space-between;align-items:center;font-weight:800;margin:6px 0 6px}
+  .hint{color:var(--muted);font-weight:600;font-size:.86rem}
+  input{
+    width:100%;padding:14px 12px;background:var(--panel2);color:var(--text);
+    border:1px solid var(--stroke);border-radius:12px;font-size:1rem;outline:0;
+  }
+  input:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(255,138,0,.18)}
+
+  .section{background:var(--panel);border:1px solid var(--stroke);border-radius:16px;padding:16px}
+  .section h3{margin:0 0 8px;font-size:1rem;font-weight:900}
+
+  .btn-row{display:flex;gap:10px;justify-content:space-between;margin-top:14px}
+  .btn{
+    cursor:pointer;border:0;border-radius:12px;padding:12px 16px;font-weight:900;letter-spacing:.1px;
+    color:#0b0f18;background:linear-gradient(90deg,var(--accent),var(--accent2));
+    box-shadow:0 12px 28px rgba(255,138,0,.25);
+  }
+  .btn:disabled{opacity:.6;cursor:not-allowed}
+  .btn.secondary{background:#1b243b;color:#cfe0ff;box-shadow:none;border:1px solid var(--stroke)}
+
+  /* Presets */
+  .preset-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .preset{cursor:pointer;padding:8px 10px;border-radius:10px;border:1px solid var(--stroke);background:#1b243b;color:#dfe6ff;font-weight:700}
+
+  /* Prize table */
+  table{width:100%;border-collapse:separate;border-spacing:0 8px}
+  th, td{padding:10px 10px;background:var(--panel2);border:1px solid var(--stroke)}
+  th{font-size:.86rem;text-transform:uppercase;letter-spacing:.5px;color:#cfd7f1}
+  td input{width:100%;padding:10px 10px}
+  .row-actions{display:flex;gap:8px;justify-content:flex-end}
+  .small-btn{padding:8px 10px;border-radius:10px;border:1px solid var(--stroke);background:#1b243b;color:#dfe6ff;cursor:pointer}
+  .small-btn.danger{border-color:rgba(239,68,68,.3);color:#ffd6d6}
+
+  /* KPIs */
+  .kpis{display:grid;gap:12px;margin-top:10px}
+  @media (min-width:900px){ .kpis-4{grid-template-columns:repeat(4,1fr)} .kpis-3{grid-template-columns:repeat(3,1fr)} }
+  .kpi{background:var(--panel2);border:1px solid var(--stroke);border-radius:14px;padding:14px}
+  .lbl{color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.6px}
+  .val{margin-top:8px;font-weight:900;font-size:1.35rem}
+  .mono{font-variant-numeric:tabular-nums}
+
+  .roi{box-shadow:0 0 0 1px rgba(255,255,255,.07)}
+  .roi.pos{box-shadow:0 0 0 1px rgba(16,185,129,.28),0 18px 36px rgba(16,185,129,.22)}
+  .roi.mid{box-shadow:0 0 0 1px rgba(245,158,11,.28),0 18px 36px rgba(245,158,11,.20)}
+  .roi.neg{box-shadow:0 0 0 1px rgba(239,68,68,.30),0 18px 36px rgba(239,68,68,.22)}
+
+  .note{margin-top:8px;color:var(--muted);font-size:.9rem}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card header">
+      <span class="badge">Raffle Promo ROI</span>
+      <h1>Ticket-based Promo Calculator (Estonia)</h1>
+      <div class="sub">Separate sportsbook & casino rules. Participants → turnover via avg €/person. Multi-prize costs. EE NGR default 3.4%.</div>
+    </div>
+
+    <div class="wizard card">
+      <div class="steps">
+        <div id="dot1" class="step-dot active"></div>
+        <div id="dot2" class="step-dot"></div>
+        <div id="dot3" class="step-dot"></div>
+        <div id="dot4" class="step-dot"></div>
+      </div>
+
+      <!-- STEP 1: Ticket rules -->
+      <div id="step1" class="panel">
+        <div class="grid grid-2">
+          <div class="section">
+            <h3>Step 1 — Define ticket rules</h3>
+            <label>Sportsbook rule <span class="hint">Every how many &euro; bet gives 1 ticket?</span></label>
+            <input id="ruleSports" type="number" inputmode="decimal" min="1" step="1" value="20" />
+            <label>Casino rule <span class="hint">Every how many &euro; bet gives 1 ticket?</span></label>
+            <input id="ruleCasino" type="number" inputmode="decimal" min="1" step="1" value="30" />
+            <div class="note">Example: If rule is 20, then &euro;20 turnover → 1 ticket; &euro;39 → 1 ticket; &euro;40 → 2 tickets.</div>
+          </div>
+          <div class="section">
+            <h3>Defaults</h3>
+            <label>NGR % of turnover (EE avg)</label>
+            <input id="ngrPct" type="number" inputmode="decimal" min="0.1" max="10" step="0.1" value="3.4" />
+            <div class="note">Used later to estimate revenue. You can adjust it per campaign mix.</div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn secondary" disabled>Back</button>
+          <button id="next1" class="btn">Next</button>
+        </div>
+      </div>
+
+      <!-- STEP 2: Participants -> turnover via avg -->
+      <div id="step2" class="panel" style="display:none">
+        <div class="grid grid-2">
+          <div class="section">
+            <h3>Step 2 — Participants & average turnover</h3>
+            <label>Sportsbook participants</label>
+            <input id="partSports" type="number" inputmode="numeric" min="0" step="1" value="300" />
+            <label>Casino participants</label>
+            <input id="partCasino" type="number" inputmode="numeric" min="0" step="1" value="300" />
+
+            <label style="margin-top:8px">Avg turnover per participant (&euro;)</label>
+            <input id="avgPer" type="number" inputmode="decimal" min="0" step="10" value="3480" />
+            <div class="preset-row">
+              <button class="preset" data-avg="2400">€2,400</button>
+              <button class="preset" data-avg="2800">€2,800</button>
+              <button class="preset" data-avg="3480">€3,480</button>
+              <button class="preset" data-avg="4000">€4,000</button>
+              <button class="preset" data-avg="6500">€6,500</button>
+            </div>
+          </div>
+
+          <div class="section">
+            <h3>Preview</h3>
+            <div class="kpis kpis-4">
+              <div class="kpi">
+                <div class="lbl">Turnover — Sportsbook</div>
+                <div id="prevToSports" class="val mono">—</div>
+              </div>
+              <div class="kpi">
+                <div class="lbl">Turnover — Casino</div>
+                <div id="prevToCasino" class="val mono">—</div>
+              </div>
+              <div class="kpi">
+                <div class="lbl">Tickets — Sportsbook</div>
+                <div id="prevTicketsSports" class="val mono">—</div>
+              </div>
+              <div class="kpi">
+                <div class="lbl">Tickets — Casino</div>
+                <div id="prevTicketsCasino" class="val mono">—</div>
+              </div>
+            </div>
+            <div class="kpis" style="margin-top:10px">
+              <div class="kpi">
+                <div class="lbl">Totals</div>
+                <div id="prevTotals" class="val mono">—</div>
+                <div class="lbl" style="margin-top:6px;">Turnover & Tickets</div>
+              </div>
+            </div>
+            <div class="note">Turnover = participants × average. Tickets = floor(turnover ÷ rule).</div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button id="back2" class="btn secondary">Back</button>
+          <button id="next2" class="btn">Next</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: Prizes -->
+      <div id="step3" class="panel" style="display:none">
+        <div class="section">
+          <h3>Step 3 — Add prizes (your real internal cost)</h3>
+          <table id="prizeTable">
+            <thead>
+              <tr>
+                <th style="width:45%">Prize name</th>
+                <th style="width:20%">Unit cost (&euro;)</th>
+                <th style="width:15%">Qty</th>
+                <th style="width:20%">Line total</th>
+              </tr>
+            </thead>
+            <tbody id="prizeBody"></tbody>
+          </table>
+          <div class="row-actions" style="margin-top:6px">
+            <button id="addPrize" class="small-btn">+ Add prize</button>
+            <button id="clearPrizes" class="small-btn danger">Clear all</button>
+          </div>
+          <div class="kpis" style="margin-top:12px">
+            <div class="kpi">
+              <div class="lbl">Total prize cost</div>
+              <div id="prizeTotal" class="val mono">0&euro;</div>
+            </div>
+          </div>
+          <div class="note">No shipping/tax. This total is used for ROI.</div>
+        </div>
+        <div class="btn-row">
+          <button id="back3" class="btn secondary">Back</button>
+          <button id="next3" class="btn">Next</button>
+        </div>
+      </div>
+
+      <!-- STEP 4: Result -->
+      <div id="step4" class="panel" style="display:none">
+        <div class="grid grid-2">
+          <div class="section">
+            <h3>Step 4 — Summary & ROI</h3>
+            <div class="kpis kpis-4">
+              <div class="kpi">
+                <div class="lbl">Tickets — Sportsbook</div>
+                <div id="outTicketsSports" class="val mono">—</div>
+              </div>
+              <div class="kpi">
+                <div class="lbl">Tickets — Casino</div>
+                <div id="outTicketsCasino" class="val mono">—</div>
+              </div>
+              <div class="kpi">
+                <div class="lbl">Tickets — Total</div>
+                <div id="outTicketsTotal" class="val mono">—</div>
+              </div>
+              <div class="kpi">
+                <div class="lbl">Total turnover</div>
+                <div id="outTurnover" class="val mono">—</div>
+              </div>
+            </div>
+
+            <div class="kpis kpis-3" style="margin-top:12px">
+              <div class="kpi">
+                <div class="lbl">Estimated NGR</div>
+                <div id="outNgr" class="val mono">—</div>
+              </div>
+              <div class="kpi">
+                <div class="lbl">Prize cost</div>
+                <div id="outPrize" class="val mono">—</div>
+              </div>
+              <div id="roiCard" class="kpi roi">
+                <div class="lbl">ROI</div>
+                <div id="outRoi" class="val mono">—</div>
+              </div>
+            </div>
+            <div class="note" id="outHint">—</div>
+          </div>
+
+          <div class="section">
+            <h3>Recalculate (optional)</h3>
+            <label>NGR % of turnover</label>
+            <input id="recalcNgrPct" type="number" inputmode="decimal" min="0.1" max="10" step="0.1" value="3.4" />
+            <div class="btn-row" style="justify-content:flex-start;margin-top:10px">
+              <button id="recalc" class="btn">Recalculate</button>
+            </div>
+            <div class="note">Adjust NGR% if your mix differs (e.g., 3.0%–4.0%).</div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button id="back4" class="btn secondary">Back</button>
+          <button id="finish" class="btn">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const fmtE = n => (isFinite(n) ? Number(n).toLocaleString('en-EE',{maximumFractionDigits:0}) + '&euro;' : '—');
+  const fmtP = n => (isFinite(n) ? (n>=0?'+':'') + n.toFixed(1) + '%' : '—');
+
+  const state = {
+    ruleSports: 20,
+    ruleCasino: 30,
+    ngrPct: 3.4,
+    partSports: 300,
+    partCasino: 300,
+    avgPer: 3480,
+    prizes: []
+  };
+
+  function goto(step){
+    [1,2,3,4].forEach(n=>{
+      $('step'+n).style.display = (n===step) ? 'block' : 'none';
+      $('dot'+n).classList.toggle('active', n<=step);
+    });
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  // STEP 1
+  function syncStep1(){
+    state.ruleSports = clampInt(readNum('ruleSports',20),1,1e9);
+    state.ruleCasino = clampInt(readNum('ruleCasino',30),1,1e9);
+    state.ngrPct     = clampNum(readNum('ngrPct',3.4),0.1,10);
+    $('ngrPct').value = state.ngrPct;
+  }
+
+  // STEP 2
+  function previewStep2(){
+    state.partSports = clampInt(readNum('partSports', state.partSports),0,1e9);
+    state.partCasino = clampInt(readNum('partCasino', state.partCasino),0,1e9);
+    state.avgPer     = clampNum(readNum('avgPer', state.avgPer),0,1e12);
+
+    const toS = state.partSports * state.avgPer;
+    const toC = state.partCasino * state.avgPer;
+
+    const tS = Math.floor(toS / state.ruleSports);
+    const tC = Math.floor(toC / state.ruleCasino);
+
+    $('prevToSports').innerHTML       = fmtE(toS);
+    $('prevToCasino').innerHTML       = fmtE(toC);
+    $('prevTicketsSports').innerHTML  = isFinite(tS) ? tS.toLocaleString('en-EE') : '—';
+    $('prevTicketsCasino').innerHTML  = isFinite(tC) ? tC.toLocaleString('en-EE') : '—';
+    $('prevTotals').innerHTML         = `${fmtE(toS+toC)} • ${(tS+tC).toLocaleString('en-EE')} tickets`;
+  }
+
+  // STEP 3 — prizes
+  function addPrizeRow(name='', unit=0, qty=1){
+    const tr = document.createElement('tr');
+    const tdName = document.createElement('td');
+    const tdUnit = document.createElement('td');
+    const tdQty  = document.createElement('td');
+    const tdTot  = document.createElement('td');
+
+    const iName = document.createElement('input');
+    iName.type='text'; iName.value=name; iName.placeholder='e.g., iPhone 15';
+    const iUnit = document.createElement('input');
+    iUnit.type='number'; iUnit.inputMode='decimal'; iUnit.min='0'; iUnit.step='1'; iUnit.value=unit;
+    const iQty = document.createElement('input');
+    iQty.type='number'; iQty.inputMode='numeric'; iQty.min='0'; iQty.step='1'; iQty.value=qty;
+
+    const recompute = ()=>{
+      const u = clampNum(parseFloat((iUnit.value||'').replace(',','.')),0,1e12);
+      const q = clampInt(parseFloat((iQty.value||'').replace(',','.')),0,1e9);
+      tdTot.innerHTML = fmtE(u*q);
+      updatePrizeTotal();
+    };
+    [iName,iUnit,iQty].forEach(inp=>inp.addEventListener('input', recompute));
+
+    tdName.appendChild(iName);
+    tdUnit.appendChild(iUnit);
+    tdQty.appendChild(iQty);
+    tdTot.innerHTML = fmtE(unit*qty);
+    tr.appendChild(tdName); tr.appendChild(tdUnit); tr.appendChild(tdQty); tr.appendChild(tdTot);
+    $('prizeBody').appendChild(tr);
+    updatePrizeTotal();
+  }
+
+  function updatePrizeTotal(){
+    let sum = 0;
+    $('prizeBody').querySelectorAll('tr').forEach(tr=>{
+      const tds = tr.querySelectorAll('td');
+      const unit = clampNum(parseFloat((tds[1].querySelector('input').value||'').replace(',','.')),0,1e12);
+      const qty  = clampInt(parseFloat((tds[2].querySelector('input').value||'').replace(',','.')),0,1e9);
+      sum += unit*qty;
+    });
+    $('prizeTotal').innerHTML = fmtE(sum);
+    state.prizes = snapshotPrizes();
+  }
+  function snapshotPrizes(){
+    const arr=[];
+    $('prizeBody').querySelectorAll('tr').forEach(tr=>{
+      const tds = tr.querySelectorAll('td');
+      arr.push({
+        name: tds[0].querySelector('input').value || '',
+        unit: clampNum(parseFloat((tds[1].querySelector('input').value||'').replace(',','.')),0,1e12),
+        qty:  clampInt(parseFloat((tds[2].querySelector('input').value||'').replace(',','.')),0,1e9),
+      });
+    });
+    return arr;
+  }
+  function clearPrizes(){ $('prizeBody').innerHTML=''; updatePrizeTotal(); }
+
+  // STEP 4 — summary & ROI
+  function computeAndPaint(overrideNgrPct=null){
+    const toS = state.partSports * state.avgPer;
+    const toC = state.partCasino * state.avgPer;
+    const ticketsS = Math.floor(toS / state.ruleSports);
+    const ticketsC = Math.floor(toC / state.ruleCasino);
+    const ticketsT = ticketsS + ticketsC;
+    const turnover = toS + toC;
+
+    const ngrPct = (overrideNgrPct!==null) ? overrideNgrPct : state.ngrPct;
+    const ngr = turnover * (ngrPct/100);
+
+    const prizeCost = state.prizes.reduce((acc,p)=> acc + (p.unit*p.qty), 0);
+    const roi = (prizeCost>0) ? ((ngr - prizeCost)/prizeCost)*100 : 0;
+
+    $('outTicketsSports').innerHTML = ticketsS.toLocaleString('en-EE');
+    $('outTicketsCasino').innerHTML = ticketsC.toLocaleString('en-EE');
+    $('outTicketsTotal').innerHTML  = ticketsT.toLocaleString('en-EE');
+    $('outTurnover').innerHTML      = fmtE(turnover);
+    $('outNgr').innerHTML           = fmtE(ngr);
+    $('outPrize').innerHTML         = fmtE(prizeCost);
+
+    const roiCard = $('roiCard');
+    roiCard.className = 'kpi roi';
+    $('outRoi').innerHTML = fmtP(roi);
+    if(roi >= 0) roiCard.classList.add('pos');
+    else if(roi >= -30) roiCard.classList.add('mid');
+    else roiCard.classList.add('neg');
+
+    $('outHint').innerHTML = (roi>=0)
+      ? 'Profitable: estimated NGR exceeds prize cost.'
+      : 'Loss-making at these settings. Increase ticket thresholds, target more participants or reduce prize cost.';
+  }
+
+  // Utils
+  function readNum(id, def=0){
+    const v = parseFloat(($(id).value||'').replace(',','.'));
+    return isFinite(v) ? v : def;
+  }
+  function clampNum(v,min,max){ return Math.max(min, Math.min(max, v)); }
+  function clampInt(v,min,max){ v = Math.floor(v); return Math.max(min, Math.min(max, isFinite(v)?v:0)); }
+
+  // Bindings
+  $('next1').addEventListener('click', ()=>{ syncStep1(); goto(2); previewStep2(); });
+  $('back2').addEventListener('click', ()=> goto(1));
+  $('next2').addEventListener('click', ()=>{ goto(3);
+    if($('prizeBody').children.length===0){ addPrizeRow('iPhone', 800, 2); addPrizeRow('Coolbet Hoodie', 50, 10); }
+  });
+  $('back3').addEventListener('click', ()=> goto(2));
+  $('next3').addEventListener('click', ()=>{ state.prizes = snapshotPrizes(); goto(4); $('recalcNgrPct').value = state.ngrPct; computeAndPaint(); });
+  $('back4').addEventListener('click', ()=> goto(3));
+  $('finish').addEventListener('click', ()=> window.scrollTo({top:0,behavior:'smooth'}));
+
+  // Step 2 live preview + presets
+  ['partSports','partCasino','avgPer'].forEach(id=> $(id).addEventListener('input', previewStep2));
+  document.querySelectorAll('.preset').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ $('avgPer').value = btn.dataset.avg; previewStep2(); });
+  });
+
+  // Prizes
+  $('addPrize').addEventListener('click', ()=> addPrizeRow('',0,1));
+  $('clearPrizes').addEventListener('click', clearPrizes);
+
+  // Recalculate NGR%
+  $('recalc').addEventListener('click', ()=>{
+    const np = clampNum(readNum('recalcNgrPct', state.ngrPct), 0.1, 10);
+    $('recalcNgrPct').value = np;
+    computeAndPaint(np);
+  });
+
+  // Init
+  goto(1);
+})();
+</script>
+</body>
+</html>
